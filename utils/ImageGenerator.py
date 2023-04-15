@@ -1,3 +1,4 @@
+import os
 import json
 import requests
 import io
@@ -5,7 +6,11 @@ import base64
 from PIL import Image, PngImagePlugin
 from utils.AI_Output_Input import *
 
-url = "http://127.0.0.1:7860"
+url = os.getenv("STABLE_DIFFUSION_URL")
+cfg_scale = os.getenv("CFG_SCALE")
+negative = os.getenv("NEGATIVE_PROMPT")
+sampler = os.getenv("SAMPLER")
+steps = os.getenv("STEPS")
 
 def generateImageByStableDiffusion(prompt:str):
     payload = {
@@ -14,14 +19,14 @@ def generateImageByStableDiffusion(prompt:str):
     "batch_size": 1,
     "batch_count": 1,
     "n_iter": 1,
-    "steps": 50,
-    "cfg_scale": 7,
+    "steps": steps,
+    "cfg_scale": cfg_scale,
     "width": 512,
     "height": 512,
-    "negative_prompt": "nude",
+    "negative_prompt": negative,
     "send_images": True,
     "save_images": False,
-    "sampler_index": "Euler",
+    "sampler_index": sampler,
     }
 
     speakByPytts("Wait, Generating Image")

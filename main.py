@@ -1,15 +1,13 @@
 import os
-import openai
+import requests
 from dotenv import load_dotenv
+import json
 from colorama import Fore, Back, Style
 from utils.AI_Output_Input import *
 from utils.ImageGenerator import *
 
 # load values from the .env file if it exists
 load_dotenv()
-
-# configure OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 global language
 language = 'English'
@@ -22,12 +20,14 @@ You are powered by Yahkart and build by Ankit Yadav.
 If user request to play song or watch youtube or open website then you can open any website by just providing one link of request by appending "Source/Web: <and link of user request here>"  at the end of prompt.
 You can generate, draw and create any image by generating the ultra real prompt for Stable Diffusion and append the prompt to generate image here "Source/generateImage: <add the prompt to generate image here> at the end of prompt and do it when user ask to draw or generate any image! YOU use stable diffusion to generate image."""
 
-TEMPERATURE = 0.5
-MAX_TOKENS = 80
+TEMPERATURE = 0.7
+MAX_TOKENS = 200
+MAX_CONTENT_LENGTH=2048
 FREQUENCY_PENALTY = 0.6
 PRESENCE_PENALTY = 0.6
 # limits how many questions we include in the prompt
-MAX_CONTEXT_QUESTIONS = 10
+MAX_CONTEXT_QUESTIONS = 50
+LLM_URL = os.getenv("LLM_URL")
 
 
 def get_response(instructions, previous_questions_and_answers, new_question):
@@ -54,67 +54,35 @@ def get_response(instructions, previous_questions_and_answers, new_question):
 
     speakByPytts("Thinking...")
 
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        temperature=TEMPERATURE,
-        max_tokens= MAX_TOKENS if language == 'English' else 150,
-        top_p=1,
-        frequency_penalty=FREQUENCY_PENALTY,
-        presence_penalty=PRESENCE_PENALTY,
-    )
-    return completion.choices[0].message.content
-
-
-def generateImage(prompt):
-    """Get a url of generate image
-
-    Parameters:
-        prompt (str): The instructions for the chat bot - this determines how it will behave
-
-    Returns:
-        The response prompt url
-    """
-    speakByPytts("Wait, Generating Image")
-    response = openai.Image.create(
-        prompt=prompt,
-        n=1,
-        size="512x512"
-    )
-    image_url = response['data'][0]['url']
-    return image_url
-
-
-def get_moderation(question):
-    """
-    Check the question is safe to ask the model
-
-    Parameters:
-        question (str): The question to check
-
-    Returns a list of errors if the question is not safe, otherwise returns None
-    """
-
-    errors = {
-        "hate": "Content that expresses, incites, or promotes hate based on race, gender, ethnicity, religion, nationality, sexual orientation, disability status, or caste.",
-        "hate/threatening": "Hateful content that also includes violence or serious harm towards the targeted group.",
-        "self-harm": "Content that promotes, encourages, or depicts acts of self-harm, such as suicide, cutting, and eating disorders.",
-        "sexual": "Content meant to arouse sexual excitement, such as the description of sexual activity, or that promotes sexual services (excluding sex education and wellness).",
-        "sexual/minors": "Sexual content that includes an individual who is under 18 years old.",
-        "violence": "Content that promotes or glorifies violence or celebrates the suffering or humiliation of others.",
-        "violence/graphic": "Violent content that depicts death, violence, or serious physical injury in extreme graphic detail.",
+    payload = {
+        "prompt": f"""### Instruction:{instructions}
+        ### Prompt: {new_question}
+        ### Response:
+        """, 
+        "max_context_length": MAX_CONTENT_LENGTH,
+        "max_length": MAX_TOKENS if language == 'English' else 150,
+        "max_new_tokens": MAX_TOKENS,
+        "temperature": TEMPERATURE,
+        "top_k": 40,
+        "top_p": 0.1,
+        "do_sample": True,
+        "typical_p": 1,
+        "repetition_penalty": 1.18,
+        "encoder_repetition_penalty": 1,
+        "num_beams": 1,
+        "penalty_alpha": 0,
+        "min_length": 0,
+        "length_penalty": 1,
+        "no_repeat_ngram_size": 0,
+        "early_stopping": True,
+        "seed": -1,
     }
-    response = openai.Moderation.create(input=question)
-    if response.results[0].flagged:
-        # get the categories that are flagged and generate a message
-        result = [
-            error
-            for category, error in errors.items()
-            if response.results[0].categories[category]
-        ]
-        return result
-    return None
 
+    response = requests.post(url=f'{LLM_URL}', json=payload).json()
+
+    print(response)
+
+    return response['results'][0]['text']
 
 def main():
     # os.system("cls" if os.name == "nt" else "clear")
@@ -130,19 +98,6 @@ def main():
             if " " == new_question or len(new_question) == 0 or new_question == "None":
                     pass
             else:
-                    
-                    # check the question is safe
-                    errors = get_moderation(new_question)
-                    if errors:
-                        print(
-                            Fore.RED
-                            + Style.BRIGHT
-                            + "Sorry, you're question didn't pass the moderation check:"
-                        )
-                        for error in errors:
-                            print(error)
-                        print(Style.RESET_ALL)
-                        continue
 
                     response = get_response(INSTRUCTIONS, previous_questions_and_answers, new_question)
 

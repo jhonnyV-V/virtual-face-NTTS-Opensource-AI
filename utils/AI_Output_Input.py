@@ -26,9 +26,6 @@ load_dotenv()
 elevenLabsApiKeys = os.getenv("ELEVENLABS_API_KEY")
 audiostack.api_key = os.getenv("ELEVENLABS_API_KEY")
 
-from elevenlabslib import ElevenLabsUser
-user = ElevenLabsUser(elevenLabsApiKeys)
-
 # First Define Settings
 class FunctionSetting:
     global SpeakingEnergy
@@ -54,8 +51,8 @@ class FunctionSetting:
 
     global voiceType
     def voiceType(VoiceType):
-       global Voice
-       Voice = VoiceType
+        global Voice
+        Voice = VoiceType
 
     global ConvertNumToVolume
     def ConvertNumToVolume(v):#100
@@ -136,29 +133,9 @@ class Function:
         if os.path.exists(filename):
             os.remove(filename) # one file at a time
 
-
-
-    # With ElevenLabs 
-
-    global speakEnglishByElevenLabs
-    def speakEnglishByElevenLabs(text):
-        voice = user.get_voices_by_name(Voice)[0]
-        voice.generate_and_play_audio(text, playInBackground=False,
-        onPlaybackStart=startSpeakingVoice ,onPlaybackEnd=endSpeakingVideo)
-        
-
-
     global speak
     def speak(text):
-        if listeningLanguage == 'en-IN':
-            speakEnglishByElevenLabs(text)
-            # speakByPytts(text)
-        elif listeningLanguage == 'hi-In':
-            speakHindiByPlayHt(text)
-        elif listeningLanguage == 'ne-NP':
-            speakNepaliByAudioStack(text)
-        else:
-            speakByPytts(text)
+        speakByPytts(text)
 
     global initializeAiVideoFun
     def initializeAiVideoFun():
